@@ -21,9 +21,9 @@
   </a>
 </p>
 
-Storage Cleanup maps storage use across your vault, plugin data, and the Obsidian trash (the `.trash` folder) by category. It helps you safely clean up large files, empty files, and empty folders, and empty out `.trash`.
+Like the storage page on your phone or computer, but for your Obsidian vault: see how much space each file and each category takes, at a glance.
 
-It turns the current vault's storage use into a map you can drill into: content files, plugin data, config & themes, `.trash`, and other & hidden, each with its size, file count, and share of the total. Start from the overview to see where the space goes, then decide what to clean. Every cleanup shows paths, sizes, and a confirmation step.
+Every file is listed by category: hidden files, files inside plugin folders, and files in the Obsidian trash (the `.trash` folder). Each category shows its size, share, and count; open one to see the files inside. Sort the list, or move files to `.trash` directly. Works on desktop and mobile.
 
 ## 1. Installation
 
@@ -57,7 +57,7 @@ The overview shows total scanned storage (the sum of the five categories), a cat
 - **Plugin data**: the plugin list is sorted by size by default. Open one to see its version, file count, last modified time, and files.
 - **Config & themes**: grouped into themes, snippets, icons, configuration, cache & temp, and other. Themes are listed one folder at a time.
 - **`.trash`**: view files and folders in the Obsidian trash. When it contains files, the **Empty .trash** action appears at the bottom.
-- **Other & hidden**: files whose path contains a hidden segment are counted here, separately from content files.
+- **Other & hidden**: files whose path contains a hidden segment are counted here, separately from content files. This includes hidden folders that Obsidian's file list does not show, such as tool-generated `.cache` or `.resojot-temp` folders. These files are counted for storage only; they cannot be opened or cleaned up from the plugin.
 
 Expand a file row to see its path, size, and modified time. Content files can be opened; any file's path can be copied. Lists can be sorted by size, name, or modified time. The More menu in the top-right offers Rescan and Copy scan report.
 
@@ -78,7 +78,7 @@ Candidates start unselected. Every cleanup is started by you, and nothing runs a
 | Content types / folders | Browse content files by type or by folder. Types include notes, images, audio, video, PDF & documents, archives, and other files. |
 | Plugin list / details | Plugins are sorted by size by default. Details show version, file count, last modified time, and files. |
 | Config & themes groups | Grouped into themes, snippets, icons, configuration, cache & temp, and other. Themes are shown one folder at a time. |
-| Other & hidden | Files with a hidden path segment are counted here, separately from content files. |
+| Other & hidden | Files with a hidden path segment are counted here, separately from content files, including hidden folders that Obsidian's file list does not show. |
 | Inline file details | Expand a row to see path, size, and modified time. Content files can be opened; any file's path can be copied. |
 | Cleanup candidates & multi-select | Collects large files (10 MB or larger), empty files (0 bytes), and empty folders. Candidates start unselected; select them in batches. |
 | Confirmation dialog | Moving to `.trash` and permanent deletion use different confirmation text. Permanent deletion uses a destructive button. |
@@ -88,7 +88,7 @@ Candidates start unselected. Every cleanup is started by you, and nothing runs a
 
 ## 4. Storage scope & privacy
 
-- **Scope**: scans only the current vault's content files (files outside the configuration folder and `.trash`), the configuration folder (defaults to `.obsidian`), and the Obsidian trash (the `.trash` folder). Plugin data, configuration, themes, snippets, icons, and caches that the scan can see live inside the configuration folder and are counted there.
+- **Scope**: scans only the current vault's content files (files outside the configuration folder and `.trash`, including hidden files and folders that Obsidian's file list does not show), the configuration folder (defaults to `.obsidian`), and the Obsidian trash (the `.trash` folder). Plugin data, configuration, themes, snippets, icons, and caches that the scan can see live inside the configuration folder and are counted there.
 - **What is read**: file metadata (size and modified time) and each plugin's `manifest.json` (name, version, author). The plugin does not read notes, attachments, or other file contents.
 - **Read-only data**: plugin data, configuration, themes, snippets, icons, and caches are counted but have no delete actions.
 - **No network**: the plugin makes no network requests, collects no data, and has no telemetry, ads, or account. The GitHub and Xiaohongshu buttons in settings only open your browser when you click them.
