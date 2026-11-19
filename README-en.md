@@ -23,7 +23,7 @@
 
 Like the storage page on your phone or computer, but for your Obsidian vault: see how much space each file and each category takes, at a glance.
 
-Every file is listed by category: hidden files, files inside plugin folders, and files in the Obsidian trash (the `.trash` folder). Each category shows its size, share, and count; open one to see the files inside. Sort the list, or move files to `.trash` directly. Works on desktop and mobile.
+Every file is listed by category: your notes and attachments, hidden files, files inside plugin folders, and files in the Obsidian trash (the `.trash` folder). Each category shows its size, share, and count; open one to see the files inside. Sort the list, or move files to `.trash` directly. Works well on desktop and mobile.
 
 ## 1. Installation
 
