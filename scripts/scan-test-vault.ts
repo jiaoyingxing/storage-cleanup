@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import type { App } from "obsidian";
+import { isHiddenPath } from "../src/scan/aggregate";
 import { buildReportText } from "../src/scan/report";
 import { scanStorage } from "../src/scan/scanner";
 
@@ -50,7 +51,7 @@ function walkContent(): Array<{
     const absoluteDirectory = absolute(current);
     for (const entry of fs.readdirSync(absoluteDirectory, { withFileTypes: true })) {
       const child = current ? posix.join(current, entry.name) : entry.name;
-      if (child === configDir || child === ".trash") continue;
+      if (isHiddenPath(child)) continue;
       if (entry.isDirectory()) {
         stack.push(child);
         continue;

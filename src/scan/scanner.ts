@@ -1,5 +1,4 @@
-import type { App } from "obsidian";
-import { TFolder } from "obsidian";
+import type { App, TFolder } from "obsidian";
 import {
   basename,
   configGroupForPath,
@@ -11,6 +10,15 @@ import {
   summarizeFiles as summarize,
   topFiles
 } from "./aggregate";
+import {
+  errorMessage,
+  mapLimit,
+  MAX_DEPTH,
+  pushError,
+  WALK_CONCURRENCY
+} from "./adapter";
+import type { FileStat, ScanAdapter } from "./adapter";
+import { isExcludedPath, scanHiddenEntries } from "./hidden";
 import type {
   FileEntry,
   PluginEntry,
@@ -20,14 +28,6 @@ import type {
 
 const TOP_LIMIT = 20;
 const PLUGIN_TOP_LIMIT = 5;
-const WALK_CONCURRENCY = 8;
-const MAX_DEPTH = 64;
-const MAX_ERRORS = 50;
-
-interface FileStat {
-  size: number;
-  mtime: number;
-}
 
 interface ManifestInfo {
   name: string;
@@ -65,7 +65,7 @@ export async function scanStorage(app: App): Promise<ScanResult> {
   const trashExists = await safeExists(app, ".trash");
   const trashFiles: FileEntry[] = [];
   if (trashExists) {
-    await walk(app, ".trash", 0, errors, (path, stat) => {
+    await walk(app.vault.adapter, ".trash", 0, errors, (path, stat) => {
       trashFiles.push({
         path,
         name: basename(path),
@@ -78,7 +78,7 @@ export async function scanStorage(app: App): Promise<ScanResult> {
 
   const configFiles: FileEntry[] = [];
   const pluginFiles = new Map<string, FileEntry[]>();
-  await walk(app, configDir, 0, errors, (path, stat) => {
+  await walk(app.vault.adapter, configDir, 0, errors, (path, stat) => {
     const relative = path.slice(configDir.length + 1);
     const pluginId = getPluginId(relative);
     const entry: FileEntry = {
@@ -105,6 +105,14 @@ export async function scanStorage(app: App): Promise<ScanResult> {
     totalSize: pluginEntries.reduce((sum, plugin) => sum + plugin.size, 0),
     entries: pluginEntries
   };
+
+  const hiddenFiles = await scanHiddenEntries(app.vault.adapter, configDir, errors);
+  const knownOtherPaths = new Set(otherFiles.map((file) => file.path));
+  for (const file of hiddenFiles) {
+    if (knownOtherPaths.has(file.path)) continue;
+    knownOtherPaths.add(file.path);
+    otherFiles.push(file);
+  }
 
   const content = summarize(contentFiles);
   const trash = summarize(trashFiles);
@@ -195,7 +203,7 @@ async function readManifest(
 }
 
 async function walk(
-  app: App,
+  adapter: ScanAdapter,
   root: string,
   depth: number,
   errors: ScanError[],
@@ -208,7 +216,7 @@ async function walk(
 
   let listed: { files: string[]; folders: string[] };
   try {
-    listed = await app.vault.adapter.list(root);
+    listed = await adapter.list(root);
   } catch (error) {
     pushError(errors, root, errorMessage(error));
     return;
@@ -216,7 +224,7 @@ async function walk(
 
   await mapLimit(listed.files, WALK_CONCURRENCY, async (path) => {
     try {
-      const stat = await app.vault.adapter.stat(path);
+      const stat = await adapter.stat(path);
       if (!stat) {
         pushError(errors, path, "stat returned null");
         return;
@@ -228,27 +236,8 @@ async function walk(
   });
 
   for (const folder of listed.folders) {
-    await walk(app, folder, depth + 1, errors, visit);
+    await walk(adapter, folder, depth + 1, errors, visit);
   }
-}
-
-async function mapLimit<T>(
-  items: T[],
-  limit: number,
-  run: (item: T) => Promise<void>
-): Promise<void> {
-  let index = 0;
-  const workers = Array.from(
-    { length: Math.min(limit, items.length) },
-    async () => {
-      while (index < items.length) {
-        const current = index;
-        index += 1;
-        await run(items[current]);
-      }
-    }
-  );
-  await Promise.all(workers);
 }
 
 async function safeExists(app: App, path: string): Promise<boolean> {
@@ -294,7 +283,7 @@ function findCandidateEmptyFolders(app: App, configDir: string): string[] {
 
   const folders = app.vault
     .getAllLoadedFiles()
-    .filter((entry): entry is TFolder => entry instanceof TFolder);
+    .filter((entry): entry is TFolder => "children" in entry);
 
   for (const folder of folders) {
     if (folder.path === "/" || isExcludedPath(folder.path, configDir)) continue;
@@ -357,15 +346,6 @@ async function isFolderEmptyOnDisk(
   return true;
 }
 
-function isExcludedPath(path: string, configDir: string): boolean {
-  return (
-    path === ".trash" ||
-    path.startsWith(".trash/") ||
-    path === configDir ||
-    path.startsWith(`${configDir}/`)
-  );
-}
-
 function parentPath(path: string): string {
   const index = path.lastIndexOf("/");
   return index > 0 ? path.slice(0, index) : "";
@@ -382,13 +362,4 @@ function hasChosenAncestor(path: string, chosen: Set<string>): boolean {
     parent = parentPath(parent);
   }
   return false;
-}
-
-function pushError(errors: ScanError[], path: string, message: string): void {
-  if (errors.length >= MAX_ERRORS) return;
-  errors.push({ path, message });
-}
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
