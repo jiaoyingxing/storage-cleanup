@@ -1,0 +1,10 @@
+{
+  "id": "storage-cleanup",
+  "name": "Storage Cleanup",
+  "version": "1.0.0",
+  "minAppVersion": "1.13.4",
+  "description": "按类目查看内容、.trash 和插件数据的存储占用，安全清理大文件、空文件，并清空 .trash 文件夹。 View storage use across vault content, .trash, and plugin data by category, then safely clean up large files, empty files, and the .trash folder.",
+  "author": "Jiao Yingxing",
+  "authorUrl": "https://github.com/jiaoyingxing",
+  "isDesktopOnly": false
+}

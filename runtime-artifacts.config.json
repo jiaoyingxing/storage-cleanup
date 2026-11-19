@@ -1,0 +1,33 @@
+{
+  "pluginId": "storage-cleanup",
+  "targets": [
+    {
+      "vault": "main-vault"
+    },
+    {
+      "vault": "android-test-vault"
+    },
+    {
+      "vault": "iphone-test-vault"
+    }
+  ],
+  "artifacts": [
+    {
+      "name": "main.js",
+      "source": "main.js"
+    },
+    {
+      "name": "manifest.json",
+      "source": "manifest.json"
+    },
+    {
+      "name": "styles.css",
+      "source": "styles.css"
+    }
+  ],
+  "requiredArtifacts": [
+    "main.js",
+    "manifest.json",
+    "styles.css"
+  ]
+}

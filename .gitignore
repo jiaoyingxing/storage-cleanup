@@ -1,0 +1,10 @@
+node_modules/
+main.js
+.tmp/
+*.log
+*.map
+.DS_Store
+runtime-artifacts.local.json
+verify-artifacts/
+dist/
+data.json

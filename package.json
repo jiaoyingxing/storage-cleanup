@@ -1,0 +1,32 @@
+{
+  "name": "storage-cleanup",
+  "version": "1.0.0",
+  "private": true,
+  "description": "按类目查看内容、.trash 和插件数据的存储占用，安全清理大文件、空文件，并清空 .trash 文件夹。 View storage use across vault content, .trash, and plugin data by category, then safely clean up large files, empty files, and the .trash folder.",
+  "author": "Jiao Yingxing",
+  "scripts": {
+    "dev": "node esbuild.config.mjs --watch",
+    "build": "tsc --noEmit && node esbuild.config.mjs production",
+    "build:runtime": "npm run build && npm run sync:runtime && npm run verify:runtime",
+    "deploy": "npm run build:runtime",
+    "sync:runtime": "node scripts/sync-runtime.mjs",
+    "verify:runtime": "node scripts/verify-runtime.mjs",
+    "check": "npm run typecheck && npm run lint && npm test && npm run check:meta && npm run check:docs",
+    "check:meta": "node scripts/check-meta.mjs",
+    "check:docs": "node scripts/check-docs.mjs",
+    "check:public": "node scripts/release/project-public.mjs --check",
+    "project:public": "node scripts/release/project-public.mjs --apply",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test test/*.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "esbuild": "^0.24.0",
+    "eslint": "9.39.5",
+    "eslint-plugin-obsidianmd": "0.4.2",
+    "obsidian": "^1.7.2",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
