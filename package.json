@@ -11,12 +11,13 @@
     "deploy": "npm run build:runtime",
     "sync:runtime": "node scripts/sync-runtime.mjs",
     "verify:runtime": "node scripts/verify-runtime.mjs",
-    "check": "npm run typecheck && npm run lint && npm test && npm run check:meta && npm run check:docs",
+    "check": "npm run typecheck && npm run lint && npm run lint:css && npm test && npm run check:meta && npm run check:docs",
     "check:meta": "node scripts/check-meta.mjs",
     "check:docs": "node scripts/check-docs.mjs",
     "check:public": "node scripts/release/project-public.mjs --check",
     "project:public": "node scripts/release/project-public.mjs --apply",
     "lint": "eslint .",
+    "lint:css": "stylelint \"styles.css\"",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test test/*.test.ts"
   },
@@ -24,8 +25,10 @@
     "@types/node": "^22.10.0",
     "esbuild": "^0.24.0",
     "eslint": "9.39.5",
-    "eslint-plugin-obsidianmd": "0.4.2",
+    "eslint-plugin-obsidianmd": "^0.6.0",
     "obsidian": "^1.7.2",
+    "stylelint": "^17.16.0",
+    "stylelint-config-obsidianmd": "^0.1.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0"
   }

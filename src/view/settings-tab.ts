@@ -214,7 +214,7 @@ export class StorageCleanupSettingTab extends PluginSettingTab {
         label: this.plugin.i18n.t("settings.contact.xiaohongshu"),
         icon: "book-open",
         url: XIAOHONGSHU_URL,
-        extraClassName: "sc-settings-about-contact-button--xiaohongshu"
+        extraClassName: "sc-settings-about-contact-button-xiaohongshu"
       });
     });
   }

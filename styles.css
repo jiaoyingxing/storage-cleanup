@@ -2,6 +2,7 @@
   --sc-bottom-inset: var(--safe-area-inset-bottom, 0px);
   --sc-status-actionbar-offset: 0px;
   --sc-status-card-height: 0px;
+
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -20,8 +21,7 @@
 .storage-cleanup-view .sc-scroll {
   flex: 1 1 auto;
   min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden auto;
   scrollbar-gutter: stable;
 }
 
@@ -198,9 +198,11 @@
   width: 30px;
   height: 30px;
   border-radius: 8px;
+
   /* 分类色染底纹，图标反白（对齐社区插件页）；无底纹色时保持中性 */
   background: var(--sc-tile-bg, var(--background-secondary));
   color: var(--sc-tile-fg, var(--text-muted));
+
   --icon-size: var(--icon-s);
   --icon-stroke: var(--icon-s-stroke-width);
 }
@@ -262,6 +264,7 @@
   width: var(--icon-s);
   height: var(--icon-s);
   color: var(--text-faint);
+
   --icon-size: var(--icon-s);
   --icon-stroke: var(--icon-s-stroke-width);
 }
@@ -299,6 +302,7 @@
   display: inline-flex;
   width: var(--icon-s);
   height: var(--icon-s);
+
   --icon-size: var(--icon-s);
   --icon-stroke: var(--icon-s-stroke-width);
 }
@@ -309,8 +313,7 @@
   align-items: center;
   justify-content: center;
   min-width: 0;
-  column-gap: 2px;
-  row-gap: 2px;
+  gap: 2px 2px;
 }
 
 .storage-cleanup-view .sc-crumb-link,
@@ -421,6 +424,7 @@
   display: inline-flex;
   width: var(--icon-xs);
   height: var(--icon-xs);
+
   --icon-size: var(--icon-xs);
   --icon-stroke: var(--icon-xs-stroke-width);
 }
@@ -513,6 +517,7 @@
 .storage-cleanup-view .sc-btn-icon {
   display: inline-flex;
   flex: 0 0 auto;
+
   --icon-size: var(--icon-s);
   --icon-stroke: var(--icon-s-stroke-width);
 }
@@ -610,7 +615,7 @@
   background: var(--background-secondary);
   color: var(--text-normal);
   font-size: var(--font-ui-smaller);
-  box-shadow: var(--shadow-s, 0 6px 18px rgba(0, 0, 0, 0.22));
+  box-shadow: var(--shadow-s, 0 6px 18px rgb(0 0 0 / 22%));
 }
 
 .storage-cleanup-view .sc-status-icon {
@@ -619,6 +624,7 @@
   height: var(--icon-s);
   flex: 0 0 auto;
   color: var(--text-muted);
+
   --icon-size: var(--icon-s);
   --icon-stroke: var(--icon-s-stroke-width);
 }
@@ -641,15 +647,6 @@
   background: var(--background-modifier-border);
 }
 
-.storage-cleanup-view .sc-status-pill .sc-status-detail {
-  color: var(--text-muted);
-}
-
-.storage-cleanup-view .sc-status-pill .sc-status-title {
-  font-size: var(--font-ui-smaller);
-  font-weight: 500;
-}
-
 .storage-cleanup-view .sc-status-actions .sc-tool-btn.is-primary {
   color: var(--text-accent);
 }
@@ -664,7 +661,7 @@
   border: 1px solid var(--background-modifier-border);
   border-radius: var(--radius-m, 8px);
   background: var(--background-secondary);
-  box-shadow: var(--shadow-s, 0 10px 28px rgba(0, 0, 0, 0.28));
+  box-shadow: var(--shadow-s, 0 10px 28px rgb(0 0 0 / 28%));
   pointer-events: auto;
   font-size: var(--font-ui-smaller);
 }
@@ -696,6 +693,15 @@
   font-size: var(--font-ui-smaller);
   line-height: 1.5;
   overflow-wrap: anywhere;
+}
+
+.storage-cleanup-view .sc-status-pill .sc-status-detail {
+  color: var(--text-muted);
+}
+
+.storage-cleanup-view .sc-status-pill .sc-status-title {
+  font-size: var(--font-ui-smaller);
+  font-weight: 500;
 }
 
 .storage-cleanup-view .sc-status-card .sc-status-detail {
@@ -779,6 +785,7 @@
     opacity: 0;
     transform: translateY(6px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -842,6 +849,7 @@
   border-radius: 8px;
   background: var(--background-secondary);
   color: var(--text-muted);
+
   --icon-size: var(--icon-s);
   --icon-stroke: var(--icon-s-stroke-width);
 }
@@ -876,7 +884,7 @@
 
 .storage-cleanup-view .sc-cleanup-actions {
   position: sticky;
-  bottom: var(--sc-bottom-inset, 0px);
+  bottom: var(--sc-bottom-inset, 0);
   z-index: 2;
   display: flex;
   align-items: center;
@@ -950,6 +958,7 @@
   width: var(--icon-s);
   height: var(--icon-s);
   color: var(--color-red);
+
   --icon-size: var(--icon-s);
   --icon-stroke: var(--icon-s-stroke-width);
 }
@@ -1004,7 +1013,7 @@
   }
 }
 
-@media (max-width: 600px) {
+@media (width <= 600px) {
   .storage-cleanup-view .sc-inner {
     padding: 14px 16px calc(28px + var(--sc-bottom-inset, 0px));
   }
@@ -1045,6 +1054,12 @@
     max-width: none;
   }
 
+  .storage-cleanup-view .sc-back,
+  .storage-cleanup-view .sc-tool-btn,
+  .storage-cleanup-view .sc-tab {
+    min-height: 44px;
+  }
+
   .storage-cleanup-view .sc-status-actions .sc-tool-btn,
   .storage-cleanup-view .sc-status-close {
     min-height: 44px;
@@ -1080,12 +1095,6 @@
   .storage-cleanup-view .sc-cleanup-actions .sc-action-btn {
     flex: 1 1 auto;
     justify-content: center;
-    min-height: 44px;
-  }
-
-  .storage-cleanup-view .sc-back,
-  .storage-cleanup-view .sc-tool-btn,
-  .storage-cleanup-view .sc-tab {
     min-height: 44px;
   }
 
@@ -1188,6 +1197,19 @@ body.is-mobile.is-phone .storage-cleanup-view .sc-crumb-current.sc-crumb-truncat
 /* 1.13+ 根级导航行行首图标（声明式页定义没有 icon 字段，由
    src/view/settings-root-icons.ts 按「行名 = 页名」补挂）：尺寸 / 颜色
    对齐宿主图标习惯（--icon-s + --text-muted）；手机端收一档间距。 */
+.sc-settings-root-icon {
+  margin-inline-end: var(--size-4-2);
+}
+
+/* stylelint-disable-next-line no-descending-specificity -- 与状态浮层 spinner 分属不同功能区块；本文件按区块组织，不按特异性排序 */
+.sc-settings-root-icon svg {
+  width: var(--icon-s);
+  height: var(--icon-s);
+}
+
+/* body.is-phone 前缀是承重的：宿主 `.setting-item > *:first-child`
+   （specificity 0,2,0）会给每行首个子元素统一派边距，单类规则压不过；
+   带前缀后本条为 (0,2,1)，手机端才能收窄。 */
 body.is-phone .sc-settings-root-icon {
   display: flex;
   align-items: center;
@@ -1195,18 +1217,6 @@ body.is-phone .sc-settings-root-icon {
   flex: 0 0 auto;
   color: var(--text-muted);
   margin-inline-end: var(--size-4-1);
-}
-
-/* body.is-phone 前缀是承重的：宿主 `.setting-item > *:first-child`
-   （specificity 0,2,0）会给每行首个子元素统一派边距，单类规则压不过；
-   带前缀后本条为 (0,2,1)，手机端才能收窄。 */
-.sc-settings-root-icon {
-  margin-inline-end: var(--size-4-2);
-}
-
-.sc-settings-root-icon svg {
-  width: var(--icon-s);
-  height: var(--icon-s);
 }
 
 /* 「关于-作者」行联系方式按钮：图标 + 短标签；窄屏允许换行。
@@ -1248,7 +1258,7 @@ body.is-phone .sc-settings-root-icon {
   height: 16px;
 }
 
-.sc-settings-about-contact-setting .setting-item-control > .sc-settings-about-contact-button--xiaohongshu svg {
+.sc-settings-about-contact-setting .setting-item-control > .sc-settings-about-contact-button-xiaohongshu svg {
   color: #e62e43;
 }
 

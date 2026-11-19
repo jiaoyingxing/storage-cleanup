@@ -245,7 +245,32 @@ export class StorageCleanupView extends ItemView {
     if (this.plugin.lastResult) {
       this.renderCurrent();
     } else {
-      await this.scan(false);
+      this.startInitialScan();
+    }
+  }
+
+  private startInitialScan(): void {
+    // 先把总览骨架画上屏，再把扫描让到下一帧之后：
+    // 打开瞬间就有内容，扫描不再阻塞视图打开与 revealLeaf。
+    this.renderCurrent();
+    const run = (): void => {
+      if (!this.scrollerEl) return;
+      if (this.plugin.lastResult) {
+        this.renderCurrent();
+        return;
+      }
+      void this.scan(false);
+    };
+    const schedule = (): void => {
+      window.requestAnimationFrame(() => {
+        window.setTimeout(run, 0);
+      });
+    };
+    if (this.app.workspace.layoutReady) {
+      schedule();
+    } else {
+      // 随工作区启动恢复的视图等宿主就绪再扫，避免与启动争主线程、空文件夹候选不全
+      this.app.workspace.onLayoutReady(schedule);
     }
   }
 
@@ -334,6 +359,12 @@ export class StorageCleanupView extends ItemView {
       return;
     }
 
+    if (this.showingSkeleton) {
+      this.showingSkeleton = false;
+      this.scrollerEl.removeAttribute("aria-busy");
+      root.addClass("is-entering");
+    }
+
     switch (state.page.kind) {
       case "overview":
         this.renderOverview(root, result);
@@ -390,6 +421,8 @@ export class StorageCleanupView extends ItemView {
 
   private renderScanPlaceholder(root: HTMLElement): void {
     if (this.scanError) {
+      this.showingSkeleton = false;
+      this.scrollerEl?.removeAttribute("aria-busy");
       const error = root.createDiv({ cls: "sc-empty sc-empty-error" });
       error.createDiv({ cls: "sc-empty-title", text: this.i18n.t("view.scanFailedTitle") });
       error.createDiv({ cls: "sc-empty-note", text: this.scanError });
@@ -400,12 +433,47 @@ export class StorageCleanupView extends ItemView {
       return;
     }
 
-    root.createDiv({ cls: "sc-scan-status", text: this.i18n.t("view.scanning") });
-    for (let index = 0; index < 5; index += 1) {
-      const skeleton = root.createDiv({ cls: "sc-skeleton-row" });
-      skeleton.createSpan({ cls: "sc-skeleton-icon" });
-      skeleton.createSpan({ cls: "sc-skeleton-text" });
+    // 骨架复用总览几何（头部 / 比例条 / 五行列表），扫描完成后同尺寸换内容，不跳版。
+    this.showingSkeleton = true;
+    this.scrollerEl?.setAttr("aria-busy", "true");
+
+    const head = root.createDiv({ cls: "sc-overview-head" });
+    const scanning = head.createDiv({ cls: "sc-scan-head" });
+    scanning.setAttr("role", "status");
+    scanning.setAttr("aria-live", "polite");
+    scanning.createSpan({ cls: "sc-scan-spinner", attr: { "aria-hidden": "true" } });
+    scanning.createSpan({ text: this.i18n.t("view.scanning") });
+    head.createDiv({ cls: "sc-vault", text: this.app.vault.getName() });
+
+    const bar = root.createDiv({ cls: "sc-bar sc-skeleton-bar", attr: { "aria-hidden": "true" } });
+    bar.createSpan({ cls: "sc-skeleton-block" });
+
+    const widths = [
+      { title: 34, sub: 23, size: 58, pct: 30 },
+      { title: 28, sub: 18, size: 52, pct: 26 },
+      { title: 37, sub: 20, size: 56, pct: 28 },
+      { title: 22, sub: 30, size: 48, pct: 24 },
+      { title: 31, sub: 19, size: 50, pct: 25 }
+    ];
+    for (const width of widths) {
+      const row = root.createDiv({
+        cls: "sc-row sc-row-static",
+        attr: { "aria-hidden": "true" }
+      });
+      row.createSpan({ cls: "sc-row-icon sc-skeleton-tile" });
+      const main = row.createSpan({ cls: "sc-row-main" });
+      this.createSkeletonBlock(main, `${width.title}%`, 13);
+      this.createSkeletonBlock(main, `${width.sub}%`, 11);
+      const value = row.createSpan({ cls: "sc-row-value" });
+      this.createSkeletonBlock(value, `${width.size}px`, 12);
+      this.createSkeletonBlock(value, `${width.pct}px`, 10);
     }
+  }
+
+  private createSkeletonBlock(parent: HTMLElement, width: string, height: number): void {
+    const block = parent.createSpan({ cls: "sc-skeleton-block" });
+    block.style.width = width;
+    block.style.height = `${height}px`;
   }
 
   private renderOverview(root: HTMLElement, result: ScanResult): void {
@@ -1778,7 +1846,7 @@ export class StorageCleanupView extends ItemView {
   }
 
   private setupBottomInset(): void {
-    if (!document.body.classList.contains("is-mobile")) return;
+    if (!activeDocument.body.classList.contains("is-mobile")) return;
     this.observeBottomBars();
     this.scheduleBottomInsetRefresh();
     for (const delay of [80, 200, 450]) {
@@ -1790,7 +1858,7 @@ export class StorageCleanupView extends ItemView {
       this.bottomInsetSettleTimers.push(id);
     }
     if (!this.bottomInsetObserver) {
-      const appContainer = document.querySelector(".app-container");
+      const appContainer = activeDocument.querySelector(".app-container");
       if (appContainer) {
         this.bottomInsetObserver = new MutationObserver(() => {
           this.observeBottomBars();
@@ -1824,7 +1892,7 @@ export class StorageCleanupView extends ItemView {
   }
 
   private refreshBottomInset(): void {
-    if (!document.body.classList.contains("is-mobile")) {
+    if (!activeDocument.body.classList.contains("is-mobile")) {
       this.contentEl.style.removeProperty("--sc-bottom-inset");
       return;
     }
@@ -1834,7 +1902,7 @@ export class StorageCleanupView extends ItemView {
     if (scrollRect.height <= 0) return;
     const bars: InsetRect[] = [];
     for (const selector of [".mobile-toolbar", ".mobile-navbar"]) {
-      const bar = document.querySelector<HTMLElement>(selector);
+      const bar = activeDocument.querySelector<HTMLElement>(selector);
       if (!bar) continue;
       const style = getComputedStyle(bar);
       if (style.display === "none" || style.visibility === "hidden") continue;
@@ -1862,7 +1930,7 @@ export class StorageCleanupView extends ItemView {
     }
     this.bottomBarObserver.disconnect();
     for (const selector of [".mobile-toolbar", ".mobile-navbar"]) {
-      const bar = document.querySelector<HTMLElement>(selector);
+      const bar = activeDocument.querySelector<HTMLElement>(selector);
       if (bar) this.bottomBarObserver.observe(bar);
     }
   }
@@ -1960,7 +2028,7 @@ export class StorageCleanupView extends ItemView {
     ellipsis?.classList.remove("is-visible");
     ellipsisSep?.classList.remove("is-visible");
 
-    if (!document.body.classList.contains("is-phone")) return;
+    if (!activeDocument.body.classList.contains("is-phone")) return;
     if (!ellipsis || !ellipsisSep) return;
 
     // Measure the full hierarchy first; the same frame hides what does not fit.
