@@ -550,32 +550,82 @@
   margin-top: 10px;
 }
 
-.storage-cleanup-view .sc-scan-status {
+/* 首次扫描骨架：复用总览几何（头部 / 比例条 / 列表行），扫描完成同尺寸换内容。
+   头部高度锁定到总占用数字的行盒，避免完成时列表上下跳。 */
+.storage-cleanup-view .sc-scan-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: calc(28px * 1.1);
   color: var(--text-muted);
   font-size: var(--font-ui-small);
-  margin-bottom: 10px;
 }
 
-.storage-cleanup-view .sc-skeleton-row {
-  display: flex;
+.storage-cleanup-view .sc-scan-spinner {
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  min-height: 56px;
-  border-bottom: 1px solid var(--background-modifier-border);
+  justify-content: center;
+  width: var(--icon-s);
+  height: var(--icon-s);
+
+  --icon-size: var(--icon-s);
+  --icon-stroke: var(--icon-s-stroke-width);
 }
 
-.storage-cleanup-view .sc-skeleton-icon {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  background: var(--background-secondary);
+.storage-cleanup-view .sc-scan-spinner svg {
+  animation: sc-status-spin 1s linear infinite;
 }
 
-.storage-cleanup-view .sc-skeleton-text {
-  width: 42%;
-  height: 14px;
+.storage-cleanup-view .sc-skeleton-block {
+  display: block;
   border-radius: 4px;
+  background: var(--background-modifier-border);
+  animation: sc-skeleton-breathe 1.6s ease-in-out infinite;
+}
+
+.storage-cleanup-view .sc-row-icon.sc-skeleton-tile {
   background: var(--background-secondary);
+  color: transparent;
+}
+
+.storage-cleanup-view .sc-row-main .sc-skeleton-block + .sc-skeleton-block,
+.storage-cleanup-view .sc-row-value .sc-skeleton-block + .sc-skeleton-block {
+  margin-top: 6px;
+}
+
+.storage-cleanup-view .sc-bar.sc-skeleton-bar {
+  background: var(--background-secondary);
+}
+
+.storage-cleanup-view .sc-bar.sc-skeleton-bar .sc-skeleton-block {
+  flex: 1 1 auto;
+  height: 100%;
+  border-radius: 0;
+}
+
+.storage-cleanup-view .sc-inner.is-entering {
+  animation: sc-content-in 160ms ease-out;
+}
+
+@keyframes sc-skeleton-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes sc-content-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .storage-cleanup-view .sc-status-layer {
@@ -805,6 +855,16 @@
 
   .storage-cleanup-view .sc-status-spinner svg {
     animation: none;
+  }
+
+  .storage-cleanup-view .sc-scan-spinner svg,
+  .storage-cleanup-view .sc-skeleton-block,
+  .storage-cleanup-view .sc-inner.is-entering {
+    animation: none;
+  }
+
+  .storage-cleanup-view .sc-skeleton-block {
+    opacity: 0.7;
   }
 }
 
@@ -1100,6 +1160,10 @@
 
   .storage-cleanup-view .sc-used-value {
     font-size: 24px;
+  }
+
+  .storage-cleanup-view .sc-scan-head {
+    min-height: calc(24px * 1.1);
   }
 
   .storage-cleanup-view .sc-overview-head {
