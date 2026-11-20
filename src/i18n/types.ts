@@ -56,6 +56,10 @@ export interface LocaleStrings {
   "trash.empty": string;
   "trash.actionbar": string;
 
+  // ---- Restore from .trash ----
+  "restoreTarget.title": string;
+  "restoreTarget.root": string;
+
   // ---- Content grouping ----
   "content.groupByType": string;
   "content.groupByFolder": string;
@@ -122,6 +126,9 @@ export interface LocaleStrings {
   "cleanup.movedTitle": string;
   "cleanup.deletedTitle": string;
   "cleanup.emptiedTrashTitle": string;
+  "cleanup.restoredTitle": string;
+  "cleanup.restoredCount.one": string;
+  "cleanup.restoredCount.other": string;
   "cleanup.sizeSuffix": string;
   "cleanup.freedSuffix": string;
   "cleanup.countSucceeded": string;
@@ -157,11 +164,15 @@ export interface LocaleStrings {
   "action.deselectAll": string;
   "action.retryFailed": string;
   "action.retryEmptyTrash": string;
+  "action.restore": string;
+  "action.restoreHere": string;
+  "action.retryRestore": string;
 
   // ---- Status ----
   "status.busyCleaningScan": string;
   "status.busyScanningCleanup": string;
   "status.busyScanningEmptyTrash": string;
+  "status.busyScanningRestore": string;
   "status.rescanning": string;
   "status.scanComplete": string;
   "status.scanCompleteDetail": string;
@@ -171,6 +182,7 @@ export interface LocaleStrings {
   "status.deletingFolders": string;
   "status.movingToTrash": string;
   "status.emptyingTrash": string;
+  "status.restoring": string;
   "status.rescanFailedNote": string;
   "status.noteSeparator": string;
   "status.cleanupRescanFailedTitle": string;

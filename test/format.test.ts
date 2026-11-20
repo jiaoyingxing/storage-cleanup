@@ -3,8 +3,6 @@ import test from "node:test";
 import { I18n } from "../src/i18n/core";
 import {
   formatBytes,
-  formatClock,
-  formatCount,
   formatDateTime,
   formatDuration,
   formatDurationShort,
@@ -22,12 +20,6 @@ test("formatBytes handles zero and units", () => {
   assert.equal(formatBytes(1024 * 1024 * 1024), "1.0 GB");
 });
 
-test("formatCount groups thousands per locale", () => {
-  assert.equal(formatCount(12345, "en"), "12,345");
-  assert.equal(formatCount(12345, "zh-cn"), "12,345");
-  assert.equal(formatCount(12345), "12,345");
-});
-
 test("formatDuration switches units", () => {
   assert.equal(formatDuration(120), "120 ms");
   assert.equal(formatDuration(1500), "1.50 s");
@@ -42,12 +34,10 @@ test("formatPercent keeps small nonzero categories visible", () => {
   assert.equal(formatPercent(50, 0), "0%");
 });
 
-test("formatClock and formatDateTime handle timestamps", () => {
+test("formatDateTime handles timestamps and unknown values", () => {
   const stamp = new Date(2026, 9, 1, 18, 22).getTime();
-  assert.equal(formatClock(stamp), "18:22");
   assert.equal(formatDateTime(stamp, en), "2026-10-01 18:22");
   assert.equal(formatDateTime(stamp, zh), "2026-10-01 18:22");
-  assert.equal(formatClock(0), "");
   assert.equal(formatDateTime(0, en), "Unknown");
   assert.equal(formatDateTime(0, zh), "未知");
 });

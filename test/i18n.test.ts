@@ -56,6 +56,25 @@ test("dynamic key families used by the view are present", () => {
   }
 });
 
+test("restore keys exist in both locales", () => {
+  const keys = [
+    "restoreTarget.title",
+    "restoreTarget.root",
+    "action.restore",
+    "action.restoreHere",
+    "action.retryRestore",
+    "status.restoring",
+    "status.busyScanningRestore",
+    "cleanup.restoredTitle",
+    "cleanup.restoredCount.one",
+    "cleanup.restoredCount.other"
+  ];
+  for (const key of keys) {
+    assert.ok(key in en, `${key} missing from en`);
+    assert.ok(key in zhCN, `${key} missing from zh-cn`);
+  }
+});
+
 test("settings tab keys are complete and external space keys are gone", () => {
   const settingsKeys = [
     "settings.open.name",

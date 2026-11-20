@@ -1,0 +1,13 @@
+{
+  "roots": ["src", "test", "scripts"],
+  "extensions": [".ts", ".tsx", ".js", ".mjs", ".cjs", ".ps1"],
+  "exclude": ["node_modules", ".git", ".tmp", "dist", "verify-artifacts", "scripts/release"],
+  "historicalMarkers": ["拆分而来", "former", "历史引用", "已归档"],
+  "allowlist": {
+    "paths": [],
+    "symbols": ["data.json", "SettingDefinitionPage", "SettingTab", "ConfirmationModal", "Scope"],
+    "lineAnchors": []
+  },
+  "minAppVersion": { "manifest": "manifest.json", "roots": ["src"] },
+  "baseline": "scripts/dev/comment-lint.baseline.json"
+}

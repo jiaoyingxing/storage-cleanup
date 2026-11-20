@@ -4,7 +4,8 @@ import type { App } from "obsidian";
 import {
   deleteEmptyFolders,
   emptyTrash,
-  moveFilesToTrash
+  moveFilesToTrash,
+  restoreTrashItems
 } from "../src/cleanup/actions";
 import type { FileEntry } from "../src/scan/types";
 
@@ -58,6 +59,16 @@ class MockAdapter {
 
   async remove(path: string): Promise<void> {
     this.files.delete(path);
+  }
+
+  /** Mirrors FileSystemAdapter.rename: fails when the destination exists. */
+  async rename(from: string, to: string): Promise<void> {
+    const file = this.files.get(from);
+    if (!file) throw new Error("missing file");
+    if (await this.exists(to)) throw new Error("Destination file already exists!");
+    this.addDir(parentPath(to));
+    this.files.set(to, file);
+    this.files.delete(from);
   }
 
   async rmdir(path: string, recursive: boolean): Promise<void> {
@@ -196,4 +207,112 @@ test("emptyTrash clears contents and keeps the .trash folder", async () => {
   assert.equal([...adapter.files.keys()].length, 0);
   assert.equal(adapter.dirs.has(".trash"), true);
   assert.deepEqual(await adapter.list(".trash"), { files: [], folders: [] });
+});
+
+test("restoreTrashItems moves entries into the vault root", async () => {
+  const { app, adapter } = makeApp();
+  adapter.addFile(".trash/old.md", 10, 1000);
+
+  const result = await restoreTrashItems(app, [file(".trash/old.md", 10)], "");
+
+  assert.equal(result.action, "restore-trash");
+  assert.equal(result.succeeded, 1);
+  assert.deepEqual(result.succeededPaths, [".trash/old.md"]);
+  assert.deepEqual(result.restoredTo, { ".trash/old.md": "old.md" });
+  assert.equal(adapter.files.has("old.md"), true);
+  assert.equal(adapter.files.has(".trash/old.md"), false);
+});
+
+test("restoreTrashItems moves entries into a chosen subfolder", async () => {
+  const { app, adapter } = makeApp();
+  adapter.addFile(".trash/old.md", 10, 1000);
+  adapter.addDir("archive");
+
+  const result = await restoreTrashItems(app, [file(".trash/old.md", 10)], "archive");
+
+  assert.equal(result.succeeded, 1);
+  assert.deepEqual(result.restoredTo, { ".trash/old.md": "archive/old.md" });
+  assert.equal(adapter.files.has("archive/old.md"), true);
+  assert.equal(adapter.files.has(".trash/old.md"), false);
+});
+
+test("restoreTrashItems adds a numeric suffix instead of overwriting", async () => {
+  const { app, adapter } = makeApp();
+  adapter.addFile(".trash/old.md", 10, 1000);
+  adapter.addFile("old.md", 1, 1000);
+  adapter.addFile("old 2.md", 1, 1000);
+
+  const result = await restoreTrashItems(app, [file(".trash/old.md", 10)], "");
+
+  assert.equal(result.succeeded, 1);
+  assert.deepEqual(result.restoredTo, { ".trash/old.md": "old 3.md" });
+  assert.equal(adapter.files.get("old.md")?.size, 1);
+  assert.equal(adapter.files.get("old 2.md")?.size, 1);
+  assert.equal(adapter.files.get("old 3.md")?.size, 10);
+});
+
+test("restoreTrashItems suffixes a name without an extension as a whole", async () => {
+  const { app, adapter } = makeApp();
+  adapter.addFile(".trash/photos", 10, 1000);
+  adapter.addFile("photos", 1, 1000);
+
+  const result = await restoreTrashItems(app, [file(".trash/photos", 10)], "");
+
+  assert.equal(result.succeeded, 1);
+  assert.deepEqual(result.restoredTo, { ".trash/photos": "photos 2" });
+  assert.equal(adapter.files.get("photos 2")?.size, 10);
+});
+
+test("restoreTrashItems reports missing sources and a vanished destination", async () => {
+  const { app, adapter } = makeApp();
+  adapter.addFile(".trash/old.md", 10, 1000);
+
+  const missingSource = await restoreTrashItems(
+    app,
+    [file(".trash/gone.md", 1)],
+    ""
+  );
+  assert.deepEqual(
+    missingSource.failures.map((failure) => [failure.path, failure.reason]),
+    [[".trash/gone.md", "missing"]]
+  );
+
+  const missingTarget = await restoreTrashItems(
+    app,
+    [file(".trash/old.md", 10)],
+    "gone-folder"
+  );
+  assert.deepEqual(
+    missingTarget.failures.map((failure) => [failure.path, failure.reason]),
+    [[".trash/old.md", "missing"]]
+  );
+  assert.equal(adapter.files.has(".trash/old.md"), true);
+});
+
+test("restoreTrashItems refuses sources outside .trash", async () => {
+  const { app, adapter } = makeApp();
+  adapter.addFile("notes/a.md", 10, 1000);
+
+  const result = await restoreTrashItems(app, [file("notes/a.md", 10)], "");
+
+  assert.equal(result.succeeded, 0);
+  assert.deepEqual(
+    result.failures.map((failure) => [failure.path, failure.reason]),
+    [["notes/a.md", "not-allowed"]]
+  );
+  assert.equal(adapter.files.has("notes/a.md"), true);
+});
+
+test("restoreTrashItems rejects a destination inside .trash", async () => {
+  const { app, adapter } = makeApp();
+  adapter.addFile(".trash/old.md", 10, 1000);
+
+  const result = await restoreTrashItems(app, [file(".trash/old.md", 10)], ".trash/sub");
+
+  assert.equal(result.succeeded, 0);
+  assert.deepEqual(
+    result.failures.map((failure) => [failure.path, failure.reason]),
+    [[".trash/old.md", "not-allowed"]]
+  );
+  assert.equal(adapter.files.has(".trash/old.md"), true);
 });

@@ -14,9 +14,9 @@
  *
  * Usage
  * -----
- *   node scripts/release/verify-release-assets.mjs --tag 1.0.0
- *   node scripts/release/verify-release-assets.mjs --tag 1.0.0 --body-file <notes.md>
- *   node scripts/release/verify-release-assets.mjs --tag 1.0.0 --repo owner/name --dir <artifact dir>
+ *   node scripts/verify-release-assets.mjs --tag 1.0.0
+ *   node scripts/verify-release-assets.mjs --tag 1.0.0 --body-file <notes.md>
+ *   node scripts/verify-release-assets.mjs --tag 1.0.0 --repo owner/name --dir <artifact dir>
  *
  * Preconditions: `gh` installed and authenticated; the local artifacts
  * (`main.js`, `manifest.json`, `styles.css`, `versions.json`) built from the

@@ -1,5 +1,7 @@
 import {
   basename,
+  contentTypeForPath,
+  isHiddenPath,
   summarizeContentTypes,
   summarizeFiles,
   topFiles
@@ -25,6 +27,9 @@ export function applyCleanupResult(
   if (cleanup.action === "delete-empty-folders") {
     return removeEmptyFolders(result, cleanup.succeededPaths);
   }
+  if (cleanup.action === "restore-trash") {
+    return restoreFromTrash(result, cleanup);
+  }
   return removeTrashFiles(result, cleanup.succeededPaths);
 }
 
@@ -36,10 +41,13 @@ function moveToTrash(result: ScanResult, paths: readonly string[]): ScanResult {
   const contentFiles = result.contentFiles.filter((file) => !removed.has(file.path));
   const trashByPath = new Map(result.trashFiles.map((file) => [file.path, file]));
   for (const file of movedFiles) {
-    const trashPath = `.trash/${file.path}`;
+    // `adapter.trashLocal()` flattens every file into the `.trash` root and keeps
+    // only the basename, so the parent folder is dropped here too.
+    const name = file.name || basename(file.path);
+    const trashPath = `.trash/${name}`;
     trashByPath.set(trashPath, {
       path: trashPath,
-      name: file.name || basename(file.path),
+      name,
       size: file.size,
       mtime: file.mtime,
       category: "trash"
@@ -69,6 +77,64 @@ function removeTrashFiles(result: ScanResult, paths: readonly string[]): ScanRes
   const trashFiles = result.trashFiles.filter((file) => !removed.has(file.path));
   if (trashFiles.length === result.trashFiles.length) return result;
   return rebuildContentAndTrash(result, result.contentFiles, trashFiles, true);
+}
+
+/**
+ * Puts restored entries back where the user chose. Restored folders keep their
+ * whole subtree, so nested trash entries disappear together with their folder.
+ * `restoredTo` is authoritative: `succeededPaths` may name a folder that never
+ * appears in `trashFiles` (which only holds files), and a name clash can rewrite
+ * the destination, so neither side can be derived from the other.
+ * Hidden destinations go to "other" so the two buckets stay mutually exclusive.
+ */
+function restoreFromTrash(result: ScanResult, cleanup: CleanupResult): ScanResult {
+  const sources = cleanup.succeededPaths.filter(
+    (path) => cleanup.restoredTo?.[path] !== undefined
+  );
+  if (sources.length === 0) return result;
+
+  const covers = (path: string): boolean =>
+    sources.some((source) => path === source || path.startsWith(`${source}/`));
+  const trashFiles = result.trashFiles.filter((file) => !covers(file.path));
+  const contentFiles = [...result.contentFiles];
+  const otherFiles = [...result.otherFiles];
+  for (const source of sources) {
+    const destination = cleanup.restoredTo?.[source];
+    if (!destination) continue;
+    const within = result.trashFiles.filter(
+      (file) => file.path === source || file.path.startsWith(`${source}/`)
+    );
+    const size = within.reduce((sum, file) => sum + file.size, 0);
+    const mtime = within.reduce((latest, file) => Math.max(latest, file.mtime), 0);
+    const hidden = isHiddenPath(destination);
+    const entry: FileEntry = {
+      path: destination,
+      name: basename(destination),
+      size,
+      mtime,
+      category: hidden ? "other" : "content",
+      contentType: hidden ? undefined : contentTypeForPath(destination)
+    };
+    if (hidden) {
+      otherFiles.push(entry);
+    } else {
+      contentFiles.push(entry);
+    }
+  }
+
+  const patched = rebuildContentAndTrash(result, contentFiles, trashFiles, result.trashExists);
+  const other = summarizeFiles(otherFiles);
+  return {
+    ...patched,
+    other,
+    otherFiles,
+    totalSize:
+      patched.content.totalSize +
+      patched.trash.totalSize +
+      result.plugins.totalSize +
+      result.config.totalSize +
+      other.totalSize
+  };
 }
 
 function rebuildContentAndTrash(

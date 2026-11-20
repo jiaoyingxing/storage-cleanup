@@ -5,7 +5,8 @@ import type { I18n } from "../i18n";
 import {
   deleteEmptyFolders,
   emptyTrash,
-  moveFilesToTrash
+  moveFilesToTrash,
+  restoreTrashItems
 } from "../cleanup/actions";
 import { applyCleanupResult } from "../cleanup/apply-result";
 import type { CleanupResult } from "../cleanup/actions";
@@ -15,8 +16,10 @@ import {
   selectZeroByteFiles
 } from "../cleanup/candidates";
 import {
+  basename,
   buildFolderTree,
   contentTypeForPath,
+  isHiddenPath,
   sortEntries
 } from "../scan/aggregate";
 import {
@@ -58,6 +61,7 @@ type Page =
   | { kind: "config-folder"; groupKey: string; path: string }
   | { kind: "cleanup-hub" }
   | { kind: "cleanup"; cleanupKind: CleanupKind }
+  | { kind: "restore-target"; paths: string[]; folder: string }
   | { kind: "other" };
 
 type ContentGroup = "type" | "folder";
@@ -71,6 +75,8 @@ interface PageState {
   rootFilesOpen: boolean;
   selectedPaths: string[];
   cleanupMulti: boolean;
+  /** `.trash` page has its own multi-select so it never shares cleanup state. */
+  trashMulti: boolean;
 }
 
 interface CrumbSegment {
@@ -101,6 +107,15 @@ interface CleanupCandidate {
   size: number;
   kind: "file" | "folder";
   file?: FileEntry;
+}
+
+/** One selectable `.trash` entry: either a file or a whole folder subtree. */
+interface TrashCandidate {
+  path: string;
+  name: string;
+  size: number;
+  mtime: number;
+  kind: "file" | "folder";
 }
 
 type StatusScope = "view" | "page";
@@ -411,6 +426,9 @@ export class StorageCleanupView extends ItemView {
         break;
       case "other":
         this.renderOther(root, result);
+        break;
+      case "restore-target":
+        this.renderRestoreTarget(root, result, state.page);
         break;
     }
 
@@ -732,7 +750,30 @@ export class StorageCleanupView extends ItemView {
       this.renderEmpty(root, this.i18n.t("trash.empty"));
       return;
     }
-    this.renderToolbar(root);
+
+    const state = this.current();
+    if (state.trashMulti) {
+      this.renderTrashMulti(root, result, state);
+      return;
+    }
+
+    const toolbar = root.createDiv({ cls: "sc-toolbar" });
+    const leading = toolbar.createDiv({ cls: "sc-toolbar-leading" });
+    this.createToolbarButton(
+      leading,
+      null,
+      this.i18n.t("action.selectMultiple"),
+      () => {
+        if (this.cleaning) return;
+        state.trashMulti = true;
+        state.expandedPath = null;
+        state.selectedPaths = [];
+        this.saveScroll();
+        this.renderCurrent();
+      }
+    );
+    this.renderSortControl(toolbar);
+
     const tree = this.getFolderTree("trash", result.trashFiles, ".trash");
     this.renderFolderContents(root, tree, (node) =>
       this.push({ kind: "trash-folder", path: node.path })
@@ -751,6 +792,245 @@ export class StorageCleanupView extends ItemView {
       () => this.confirmEmptyTrash(result),
       "danger"
     );
+  }
+
+  private renderTrashMulti(
+    root: HTMLElement,
+    result: ScanResult,
+    state: PageState
+  ): void {
+    const tree = this.getFolderTree("trash", result.trashFiles, ".trash");
+    const entries = collectTrashEntries(tree);
+    const candidatePaths = new Set(entries.map((entry) => entry.path));
+    state.selectedPaths = state.selectedPaths.filter((path) => candidatePaths.has(path));
+
+    if (entries.length === 0) {
+      state.trashMulti = false;
+      state.selectedPaths = [];
+      this.renderEmpty(root, this.i18n.t("trash.empty"));
+      return;
+    }
+
+    const toolbar = root.createDiv({ cls: "sc-toolbar" });
+    const leading = toolbar.createDiv({ cls: "sc-toolbar-leading" });
+    this.createToolbarButton(
+      leading,
+      null,
+      this.i18n.t("action.cancelSelection"),
+      () => {
+        if (this.cleaning) return;
+        state.trashMulti = false;
+        state.selectedPaths = [];
+        this.saveScroll();
+        this.renderCurrent();
+      }
+    );
+    const selectAll = this.createToolbarButton(
+      leading,
+      null,
+      this.i18n.t("action.selectAll"),
+      () => {
+        if (this.cleaning) return;
+        const allSelected = entries.every((entry) =>
+          state.selectedPaths.includes(entry.path)
+        );
+        state.selectedPaths = allSelected
+          ? []
+          : entries.map((entry) => entry.path);
+        this.saveScroll();
+        this.renderCurrent();
+      }
+    );
+    this.renderSortControl(toolbar);
+
+    const list = root.createDiv({ cls: "sc-select-list" });
+    const actionbar = root.createDiv({ cls: "sc-cleanup-actions" });
+    const selectedText = actionbar.createSpan({ cls: "sc-cleanup-selected" });
+    const restore = this.createActionButton(
+      actionbar,
+      "archive-restore",
+      this.i18n.t("action.restore"),
+      () => this.openRestoreTarget(state.selectedPaths),
+      "primary"
+    );
+    const empty = this.createActionButton(
+      actionbar,
+      "trash-2",
+      this.i18n.t("action.emptyTrash"),
+      () => this.confirmEmptyTrash(result),
+      "danger"
+    );
+
+    const update = (): void => {
+      const chosen = entries.filter((entry) =>
+        state.selectedPaths.includes(entry.path)
+      );
+      const count = chosen.length;
+      if (count === 0) {
+        selectedText.textContent = this.i18n.t("cleanup.noneSelected");
+      } else {
+        selectedText.empty();
+        selectedText.createSpan({
+          text: this.i18n.t("cleanup.selectedCount", { count })
+        });
+        selectedText.createSpan({
+          text: formatBytes(chosen.reduce((sum, entry) => sum + entry.size, 0))
+        });
+      }
+      restore.disabled = count === 0 || this.cleaning;
+      empty.disabled = this.cleaning;
+      selectAll.textContent =
+        count === entries.length
+          ? this.i18n.t("action.deselectAll")
+          : this.i18n.t("action.selectAll");
+    };
+
+    for (const entry of sortEntries(entries, state.sort)) {
+      this.renderTrashCandidate(list, entry, state, update);
+    }
+    update();
+  }
+
+  private renderTrashCandidate(
+    parent: HTMLElement,
+    entry: TrashCandidate,
+    state: PageState,
+    onChange: () => void
+  ): void {
+    const selected = state.selectedPaths.includes(entry.path);
+    const row = parent.createEl("label", {
+      cls: `sc-select-row${selected ? " is-selected" : ""}`
+    });
+    const checkbox = row.createEl("input", { cls: "sc-select-checkbox" });
+    checkbox.type = "checkbox";
+    checkbox.checked = selected;
+    checkbox.addEventListener("click", (event) => event.stopPropagation());
+    checkbox.addEventListener("change", () => {
+      if (this.cleaning) {
+        checkbox.checked = !checkbox.checked;
+        return;
+      }
+      const next = new Set(state.selectedPaths);
+      if (checkbox.checked) {
+        next.add(entry.path);
+      } else {
+        next.delete(entry.path);
+      }
+      state.selectedPaths = [...next];
+      row.toggleClass("is-selected", checkbox.checked);
+      onChange();
+    });
+
+    const icon = row.createSpan({ cls: "sc-select-icon" });
+    setIcon(icon, entry.kind === "folder" ? "folder" : "file");
+
+    const main = row.createSpan({ cls: "sc-select-main" });
+    main.createSpan({ cls: "sc-select-name", text: entry.name });
+    main.createSpan({ cls: "sc-select-path", text: entry.path });
+    if (entry.kind === "file") {
+      row.createSpan({ cls: "sc-select-size", text: formatBytes(entry.size) });
+    }
+  }
+
+  private openRestoreTarget(paths: readonly string[]): void {
+    if (paths.length === 0) return;
+    this.push({ kind: "restore-target", paths: [...paths], folder: "" });
+  }
+
+  private renderRestoreTarget(
+    root: HTMLElement,
+    result: ScanResult,
+    page: { paths: string[]; folder: string }
+  ): void {
+    this.renderPageHeader(root);
+    if (page.paths.length === 0) {
+      this.renderEmpty(root, this.i18n.t("trash.empty"));
+      return;
+    }
+
+    const folders = this.restorableFolders(result);
+    const here = page.folder;
+    const children = folders.filter((folder) => parentOf(folder) === here);
+
+    const list = root.createDiv({ cls: "sc-list" });
+    // The current folder is the only selectable row: it is what "restore here"
+    // uses. Every other row is a navigation entry into its subtree.
+    this.renderRestoreTargetRow(list, here, true);
+    for (const folder of sortEntries(
+      children.map((path) => ({
+        path,
+        name: basename(path),
+        size: 0,
+        mtime: 0
+      })),
+      this.current().sort
+    )) {
+      this.renderRestoreTargetRow(list, folder.path, false);
+    }
+
+    const actionbar = root.createDiv({ cls: "sc-cleanup-actions" });
+    actionbar.createSpan({ cls: "sc-cleanup-selected" });
+    this.createActionButton(
+      actionbar,
+      "archive-restore",
+      this.i18n.t("action.restoreHere"),
+      () => void this.runRestore(page.paths, here),
+      "primary"
+    );
+  }
+
+  private renderRestoreTargetRow(
+    parent: HTMLElement,
+    path: string,
+    current: boolean
+  ): void {
+    const row = parent.createDiv({
+      cls: `sc-restore-row${current ? " is-current" : ""}`
+    });
+    const radio = row.createEl("input", { cls: "sc-select-checkbox" });
+    radio.type = "radio";
+    radio.checked = current;
+    radio.disabled = !current;
+    radio.addEventListener("click", (event) => event.stopPropagation());
+
+    const icon = row.createSpan({ cls: "sc-select-icon" });
+    setIcon(icon, current ? "folder-open" : "folder");
+
+    const main = row.createSpan({ cls: "sc-select-main" });
+    main.createSpan({
+      cls: "sc-select-name",
+      text: path ? basename(path) : this.i18n.t("restoreTarget.root")
+    });
+
+    if (!current) {
+      const chevron = row.createSpan({ cls: "sc-chev" });
+      setIcon(chevron, "chevron-right");
+      row.addEventListener("click", () => {
+        const state = this.current();
+        if (state.page.kind !== "restore-target") return;
+        this.push({
+          kind: "restore-target",
+          paths: [...state.page.paths],
+          folder: path
+        });
+      });
+    }
+  }
+
+  /** Content-area folders only: hidden paths, `.trash` and the config dir are out. */
+  private restorableFolders(result: ScanResult): string[] {
+    const configDir = result.configDir;
+    return this.app.vault
+      .getAllFolders(false)
+      .map((folder) => folder.path)
+      .filter(
+        (path) =>
+          path !== ".trash" &&
+          !path.startsWith(".trash/") &&
+          path !== configDir &&
+          !path.startsWith(`${configDir}/`) &&
+          !isHiddenPath(path)
+      );
   }
 
   private renderTrashFolder(root: HTMLElement, result: ScanResult, path: string): void {
@@ -1399,6 +1679,77 @@ export class StorageCleanupView extends ItemView {
     }
   }
 
+  private async runRestore(paths: readonly string[], folder: string): Promise<void> {
+    if (this.cleaning) return;
+    if (this.scanning) {
+      this.showInfoStatus(this.i18n.t("status.busyScanningRestore"), "info", 2500);
+      return;
+    }
+    const result = this.plugin.lastResult;
+    if (!result) return;
+
+    const tree = this.getFolderTree("trash", result.trashFiles, ".trash");
+    const entries: FileEntry[] = [];
+    for (const path of paths) {
+      const file = result.trashFiles.find((candidate) => candidate.path === path);
+      if (file) {
+        entries.push(file);
+        continue;
+      }
+      const node = findFolder(tree, path);
+      if (!node) continue;
+      entries.push({
+        path: node.path,
+        name: node.name,
+        size: node.size,
+        mtime: node.mtime,
+        category: "trash"
+      });
+    }
+    if (entries.length === 0) return;
+
+    this.cleaning = true;
+    this.setCleaningUi(true);
+    this.showRunningStatus(this.i18n.t("status.restoring"));
+    let outcome: CleanupResult;
+    try {
+      outcome = await restoreTrashItems(this.app, entries, folder);
+    } catch (error) {
+      outcome = {
+        action: "restore-trash",
+        total: entries.length,
+        succeeded: 0,
+        skipped: 0,
+        failed: 1,
+        freedBytes: 0,
+        succeededPaths: [],
+        failures: [{ path: "", status: "failed", reason: "error", detail: errorMessage(error) }]
+      };
+    }
+
+    this.cleaning = false;
+    this.setCleaningUi(false);
+    this.applyCleanupOutcome(outcome);
+    // Unwind every restore picker pushed above `.trash`: they targeted entries
+    // that no longer exist once the batch ran.
+    while (
+      this.stack.length > 1 &&
+      this.current().page.kind === "restore-target"
+    ) {
+      this.stack.pop();
+    }
+    const state = this.current();
+    state.trashMulti = false;
+    state.selectedPaths = [];
+    this.saveScroll();
+    this.renderCurrent();
+    this.showCleanupResultStatus(outcome);
+    const refreshed = await this.scan(false);
+    if (!refreshed && this.scanError) {
+      this.showCleanupRescanFailure();
+    }
+  }
+
   private confirmEmptyTrash(result: ScanResult): void {
     const files = result.trashFiles;
     new CleanupConfirmModal(this.app, this.i18n, {
@@ -1465,6 +1816,17 @@ export class StorageCleanupView extends ItemView {
     }
   }
 
+  /** Retry hook for a failed restore: reopen the picker with the failed entries. */
+  private retryRestoreFailures(result: CleanupResult): void {
+    const failed = result.failures.map((failure) => failure.path).filter(Boolean);
+    if (failed.length === 0) return;
+    this.dismissStatus(true);
+    if (this.current().page.kind === "restore-target") {
+      this.stack.pop();
+    }
+    this.openRestoreTarget(failed);
+  }
+
   private showCleanupResultStatus(result: CleanupResult): void {
     if (result.failed === 0 && result.skipped === 0) {
       const text = cleanupSuccessText(result, this.i18n);
@@ -1480,18 +1842,24 @@ export class StorageCleanupView extends ItemView {
             icon: "refresh-cw",
             onClick: () => this.retryCleanupFailures(result)
           }
-        : page.kind === "trash" && result.action === "empty-trash"
+        : result.action === "restore-trash"
           ? {
-              label: this.i18n.t("action.retryEmptyTrash"),
+              label: this.i18n.t("action.retryRestore"),
               icon: "refresh-cw",
-              onClick: () => {
-                const current = this.plugin.lastResult;
-                if (!current) return;
-                this.dismissStatus(true);
-                this.confirmEmptyTrash(current);
-              }
+              onClick: () => this.retryRestoreFailures(result)
             }
-          : undefined;
+          : page.kind === "trash" && result.action === "empty-trash"
+            ? {
+                label: this.i18n.t("action.retryEmptyTrash"),
+                icon: "refresh-cw",
+                onClick: () => {
+                  const current = this.plugin.lastResult;
+                  if (!current) return;
+                  this.dismissStatus(true);
+                  this.confirmEmptyTrash(current);
+                }
+              }
+            : undefined;
 
     this.showErrorStatus({
       scope: "page",
@@ -2240,6 +2608,15 @@ export class StorageCleanupView extends ItemView {
     this.createActionButton(actions, "copy", this.i18n.t("action.copyPath"), () => {
       void this.copyText(file.path, this.i18n.t("notice.pathCopied"));
     });
+    if (page.kind === "trash" || page.kind === "trash-folder") {
+      this.createActionButton(
+        actions,
+        "archive-restore",
+        this.i18n.t("action.restore"),
+        () => this.openRestoreTarget([file.path]),
+        "primary"
+      );
+    }
     if (cleanupKind) {
       this.createActionButton(
         actions,
@@ -2440,6 +2817,20 @@ export class StorageCleanupView extends ItemView {
             index
           });
           return;
+        case "restore-target": {
+          // The picker is one logical page with a drill-down cursor, so the
+          // breadcrumb shows the title once plus the current folder. Showing one
+          // segment per stacked page would repeat the label on every level.
+          const previous = this.stack[index - 1]?.page;
+          if (previous?.kind !== "restore-target") {
+            crumbs.push({ label: this.i18n.t("restoreTarget.title"), index });
+          }
+          const next = this.stack[index + 1]?.page;
+          if (page.folder && next?.kind !== "restore-target") {
+            crumbs.push({ label: basename(page.folder), index });
+          }
+          return;
+        }
         case "other":
           crumbs.push({ label: this.i18n.t("category.other"), index });
           return;
@@ -2764,7 +3155,8 @@ function createPageState(
     expandedPath: null,
     rootFilesOpen: false,
     selectedPaths: [],
-    cleanupMulti: false
+    cleanupMulti: false,
+    trashMulti: false
   };
 }
 
@@ -2792,6 +3184,41 @@ function leafName(path: string): string {
   const trimmed = path.replace(/\/+$/, "");
   const index = trimmed.lastIndexOf("/");
   return index >= 0 ? trimmed.slice(index + 1) : trimmed;
+}
+
+/** Parent folder of a vault path; the root folder maps to "" so it never matches. */
+function parentOf(path: string): string {
+  const index = path.lastIndexOf("/");
+  return index > 0 ? path.slice(0, index) : "";
+}
+
+/**
+ * Flattens a `.trash` folder tree into selectable entries.
+ * A folder is one entry covering its whole subtree, so selecting it restores
+ * everything underneath in a single move; its children are not listed separately
+ * because the folder already carries their size.
+ */
+function collectTrashEntries(node: FolderNode): TrashCandidate[] {
+  const entries: TrashCandidate[] = [];
+  for (const folder of node.folders) {
+    entries.push({
+      path: folder.path,
+      name: folder.name,
+      size: folder.size,
+      mtime: folder.mtime,
+      kind: "folder"
+    });
+  }
+  for (const file of node.files) {
+    entries.push({
+      path: file.path,
+      name: file.name,
+      size: file.size,
+      mtime: file.mtime,
+      kind: "file"
+    });
+  }
+  return entries;
 }
 
 function cleanupEmptyText(kind: CleanupKind, i18n: I18n): string {
@@ -2828,6 +3255,18 @@ function cleanupSuccessText(
     return {
       title: i18n.t("cleanup.deletedTitle"),
       detail: i18n.t("cleanup.foldersCount", { count: result.succeeded })
+    };
+  }
+  if (result.action === "restore-trash") {
+    const destinations = Object.values(result.restoredTo ?? {});
+    const folder = destinations.length > 0 ? parentOf(destinations[0]) : "";
+    const where = folder || i18n.t("restoreTarget.root");
+    return {
+      title: i18n.t("cleanup.restoredTitle"),
+      detail: i18n.t("cleanup.restoredCount", {
+        count: result.succeeded,
+        path: where
+      })
     };
   }
   return {

@@ -21,119 +21,250 @@
   </a>
 </p>
 
-Like the storage page on your phone or computer, but for your Obsidian vault: see how much space each file and each category takes, at a glance.
+Like opening the storage page on your phone or computer: see at a glance how much space each file, and each type of file, takes in your Obsidian vault.
 
-Every file is listed by category: your notes and attachments, hidden files, files inside plugin folders, and files in the Obsidian trash (the `.trash` folder). Each category shows its size, share, and count; open one to see the files inside. Sort the list, or move files to `.trash` directly. Works well on desktop and mobile.
+Every file is listed by category — notes, attachments, hidden files, files inside plugin folders, and the `.trash` trash folder. Open a category to see the individual files; files can be sorted, moved to `.trash` directly, and restored from `.trash`. It runs smoothly on desktop and mobile.
+
+## Table of contents
+
+- [1. Installation](#1-installation)
+- [2. Opening the view](#2-opening-the-view)
+- [3. Overview](#3-overview)
+- [4. The five categories](#4-the-five-categories)
+- [5. Viewing files](#5-viewing-files)
+- [6. Cleanup](#6-cleanup)
+- [7. Restoring from .trash](#7-restoring-from-trash)
+- [8. Scanning and privacy](#8-scanning-and-privacy)
+- [9. Settings page](#9-settings-page)
+- [10. Limitations](#10-limitations)
+- [11. FAQ](#11-faq)
+- [12. Feedback and license](#12-feedback-and-license)
 
 ## 1. Installation
 
-### 1.1 Community plugins
+### 1.1 Manual installation
 
-Once the plugin is listed, search for **Storage Cleanup** in the official Obsidian community plugin directory and install it. Until then, use one of the manual options below.
+Download `main.js`, `manifest.json`, and `styles.css` from [Releases](https://github.com/jiaoyingxing/storage-cleanup/releases) and put them in your vault's `.obsidian/plugins/storage-cleanup/`:
 
-### 1.2 Manual installation
+```text
+<vault>/
+└─ .obsidian/
+   └─ plugins/
+      └─ storage-cleanup/
+         ├─ main.js
+         ├─ manifest.json
+         └─ styles.css
+```
 
-Download `main.js`, `manifest.json`, and `styles.css` from [GitHub Releases](https://github.com/jiaoyingxing/storage-cleanup/releases), place them in `.obsidian/plugins/storage-cleanup/` in your vault (the same path under the app's data folder on mobile), restart Obsidian, and enable the plugin in the community plugins list.
+Create the folder if it does not exist yet. Once the files are in place, restart Obsidian and enable Storage Cleanup under Settings → Community plugins.
 
-### 1.3 BRAT
+If it already shows up in the community plugin directory, you can install it from Settings → Community plugins → Browse instead.
 
-Install [BRAT](https://github.com/TfTHacker/obsidian42-brat) and add `jiaoyingxing/storage-cleanup` to follow GitHub Releases.
+### 1.2 Requirements
 
-## 2. Usage
+- Obsidian 1.13.4 or later.
+- Desktop and mobile are both supported.
 
-### 2.1 Opening Storage Cleanup
+## 2. Opening the view
 
-Pick whichever is handy:
+Three entry points, one tab:
 
-- **Ribbon icon**: click the hard-drive icon.
-- **Command palette**: run "Open Storage Cleanup".
-- **Settings**: Settings → Community plugins → Storage Cleanup → click **Open** on the "Open Storage Cleanup" row.
+| Entry | Action |
+|:---|:---|
+| Left sidebar | Click the hard-drive icon |
+| Command palette | Run "Open Storage Cleanup" |
+| Settings | Settings → Community plugins → Storage Cleanup → **Open** |
 
-### 2.2 Reading the storage map
+Every page except the overview has **Back** in the top left; the row of levels in the header is clickable too. Esc does the same as **Back**.
 
-The overview shows total scanned storage (the sum of the five categories), a category share bar, and the size and count of each category: content files, plugin data, config & themes, `.trash`, and other & hidden. Select a category to drill down (when `.trash` is missing, the row only shows a note). Subpages have a clickable breadcrumb; press Esc or use Back to return one level.
+The **More** menu at the top right has **Rescan** and **Copy scan report**.
 
-- **Content files**: browse by type (notes, images, audio, video, PDF & documents, archives, other files) or switch to folders. The largest files are listed separately below the main list.
-- **Plugin data**: the plugin list is sorted by size by default. Open one to see its version, file count, last modified time, and files.
-- **Config & themes**: grouped into themes, snippets, icons, configuration, cache & temp, and other. Themes are listed one folder at a time.
-- **`.trash`**: view files and folders in the Obsidian trash. When it contains files, the **Empty .trash** action appears at the bottom.
-- **Other & hidden**: files whose path contains a hidden segment are counted here, separately from content files. This includes hidden folders that Obsidian's file list does not show, such as tool-generated `.cache` or `.resojot-temp` folders. These files are counted for storage only; they cannot be opened or cleaned up from the plugin.
+## 3. Overview
 
-Expand a file row to see its path, size, and modified time. Content files can be opened; any file's path can be copied. Lists can be sorted by size, name, or modified time. The More menu in the top-right offers Rescan and Copy scan report.
+The top shows the total of all five categories and the vault name, then a share bar, then one row per category:
 
-### 2.3 Cleaning up files
+| Category | Contents |
+|:---|:---|
+| Content files | Notes, attachments, and other regular files |
+| Plugin data | Space used by each plugin under `plugins/` |
+| Config & themes | Themes, snippets, icons, configuration, caches |
+| .trash | The Obsidian trash |
+| Other & hidden | Files under a hidden path segment |
 
-1. When candidates exist, the overview shows a Cleanup row with counts of large files, empty files, and empty folders.
-2. Open Cleanup, pick a category, choose Select, and check the files or folders you want to handle.
-3. Use the action bar at the bottom and confirm in the dialog.
-4. Large files and empty files move to `.trash`; empty folders are permanently deleted; emptying `.trash` permanently deletes all files inside it.
+Each row shows its size and share on the right; click one to open that category.
 
-Candidates start unselected. Every cleanup is started by you, and nothing runs automatically or on a schedule.
+When cleanup candidates exist, a **Cleanup** row appears at the end with the number of items. If some locations could not be read, "N locations could not be read" appears below the list.
 
-## 3. Features
+## 4. The five categories
 
-| Feature | Description |
-| --- | --- |
-| Five categories | Content files, plugin data, config & themes, `.trash`, and other & hidden each shows size, count (files or plugins), and share of the total. The total is the sum of the five. |
-| Content types / folders | Browse content files by type or by folder. Types include notes, images, audio, video, PDF & documents, archives, and other files. |
-| Plugin list / details | Plugins are sorted by size by default. Details show version, file count, last modified time, and files. |
-| Config & themes groups | Grouped into themes, snippets, icons, configuration, cache & temp, and other. Themes are shown one folder at a time. |
-| Other & hidden | Files with a hidden path segment are counted here, separately from content files, including hidden folders that Obsidian's file list does not show. |
-| Inline file details | Expand a row to see path, size, and modified time. Content files can be opened; any file's path can be copied. |
-| Cleanup candidates & multi-select | Collects large files (10 MB or larger), empty files (0 bytes), and empty folders. Candidates start unselected; select them in batches. |
-| Confirmation dialog | Moving to `.trash` and permanent deletion use different confirmation text. Permanent deletion uses a destructive button. |
-| Sorting & scan report | Sort by size, name, or modified time. Copy a text report with category totals, largest files, and read errors. |
-| Chinese & English | The interface follows Obsidian's current language and shows Simplified Chinese or English. |
-| Desktop / mobile | The same view adapts to desktop and mobile widths. |
+### 4.1 Content files
 
-## 4. Storage scope & privacy
+Grouped by type by default: notes, images, audio, video, PDF & documents, archives, and other files. Click a type to see its files.
 
-- **Scope**: scans only the current vault's content files (files outside the configuration folder and `.trash`, including hidden files and folders that Obsidian's file list does not show), the configuration folder (defaults to `.obsidian`), and the Obsidian trash (the `.trash` folder). Plugin data, configuration, themes, snippets, icons, and caches that the scan can see live inside the configuration folder and are counted there.
-- **What is read**: file metadata (size and modified time) and each plugin's `manifest.json` (name, version, author). The plugin does not read notes, attachments, or other file contents.
-- **Read-only data**: plugin data, configuration, themes, snippets, icons, and caches are counted but have no delete actions.
-- **No network**: the plugin makes no network requests, collects no data, and has no telemetry, ads, or account. The GitHub and Xiaohongshu buttons in settings only open your browser when you click them.
-- **Outside the scope**: app-level caches, Obsidian Sync and Publish, cloud drives, the system trash, and system backups are not scanned. The plugin cannot list or clean them.
-- **How sizes are measured**: sizes are logical file sizes. Cloud placeholders, disk block usage, and remote storage are not visible, so the reported total may be lower than the space used on disk.
+You can also switch to **By folder** and drill down. Both views show the five largest files in the content area.
 
-## 5. Cleanup behavior
+### 4.2 Plugin data
 
-- **Recoverable**: large files (10 MB or larger) and empty files (0 bytes) are only moved to `.trash`. Move a file back to its original path to restore it.
-- **Permanent**: empty folders and emptying `.trash` cannot be undone. Only top-level empty folders in the content area are listed; deleting one also removes its empty subfolders. Emptying `.trash` deletes all files inside it but keeps the `.trash` folder.
-- **Manual only**: candidates start unselected. Choose Select, check the items you want, and confirm in the dialog. Every cleanup is started by you, and nothing runs automatically or on a schedule.
-- **Rechecks**: before moving a file, the plugin checks its size and modified time again and skips files that changed. Before deleting an empty folder, it confirms the folder is still empty and contains no hidden folders.
-- **Read-only protection**: plugin data, configuration, themes, snippets, icons, and caches never appear as cleanup candidates and have no delete actions.
-- **Back up first**: cleanup changes files in your vault. Check paths and sizes before you start, and keep a backup of anything important.
+One row per plugin with its name, version, file count, and size. Open one to see that plugin's files and subfolders; **Copy path** is at the top.
 
-## 6. Compatibility
+This category is counted only, with no delete actions.
 
-- Minimum Obsidian version: `1.13.4`.
-- Desktop and mobile are both supported (`isDesktopOnly: false`).
-- The interface follows Obsidian's current language: Simplified Chinese for Chinese locales, English otherwise. After changing Obsidian's language, reload the plugin or restart Obsidian for the change to take effect.
+### 4.3 Config & themes
 
-## 7. Known limitations
+Grouped into themes, snippets, icons, configuration, cache & temp, and other. Click a group to see its files. Each theme gets its own row.
 
-- 1.0 does not run automatic or scheduled cleanups.
-- 1.0 does not clean up unused attachments, duplicate files, plugin logs, or plugin caches. Plugin data, configuration, themes, snippets, icons, and caches are read-only.
-- There is no search, and the plugin does not read file contents.
-- The system trash, app-level caches, Obsidian Sync and Publish, cloud drives, and system backups are not scanned.
-- The first version keeps the full file list in memory and renders it in full. Performance on very large vaults (10k+ files) is still being verified; scanning or scrolling may be slower in a large vault.
-- Scan results live in the current plugin session. Reopening the view shows the last result; reloading the plugin starts a new scan.
-- Empty folder candidates depend on the folder structure Obsidian has loaded. In rare cases some may be missed; rescan to check again.
+Also counted only.
 
-## 8. Development
+### 4.4 .trash
 
-Source and issue tracker: <https://github.com/jiaoyingxing/storage-cleanup>
+`.trash` is the Obsidian trash at the root of your vault — not the system trash.
+
+You can enter subfolders to browse. Expanding a file row gives **Copy path** and **Restore**. When there is content, **Empty .trash** is at the bottom of the page; emptying permanently deletes everything inside.
+
+### 4.5 Other & hidden
+
+Files with any path segment starting with `.` land here, including hidden folders Obsidian's file list does not show.
+
+They are counted only — they cannot be opened or cleaned up.
+
+## 5. Viewing files
+
+Expand a row to see the full path, size, and modified time. Content files can be opened; any file's path can be copied.
+
+The sort button at the right of the toolbar sorts by size, name, or modified time.
+
+## 6. Cleanup
+
+### 6.1 Getting to cleanup
+
+When candidates exist, the last row of the overview is **Cleanup**. It opens three directions, showing only the ones with candidates:
+
+| Direction | Rule |
+|:---|:---|
+| Large files | 10 MB or larger |
+| Empty files | 0 bytes |
+| Empty folders | no files inside |
+
+Candidates come only from content files. Files in the configuration folder, hidden paths, and `.trash` never appear.
+
+### 6.2 How to handle them
+
+One item: expand a candidate row and choose **Move to .trash** or **Delete permanently**.
+
+In batches: choose **Select** in the toolbar, check the items, then use the button at the bottom. Candidates start unchecked; **Select all** checks everything.
+
+### 6.3 Where each candidate ends up
+
+| Candidate | Result | Recoverable |
+|:---|:---|:---|
+| Large files | Moved to `.trash` | Yes, see section 7 |
+| Empty files | Moved to `.trash` | Same as above |
+| Empty folders | Permanently deleted | No |
+
+Action buttons open a confirmation dialog; permanent deletion uses a destructive button.
+
+### 6.4 Results
+
+When everything succeeds a toast appears at the bottom and dismisses itself after a few seconds. If anything was skipped or failed, a card stays with the counts; expand it to see each reason, and **Retry failed items** runs them again.
+
+Once cleanup finishes, successful items leave the list and the overview updates.
+
+## 7. Restoring from .trash
+
+When Obsidian puts a file into `.trash` it keeps only the file name, not the original folder — so you choose where a restored item goes.
+
+Expand a row in `.trash` and choose **Restore**, or choose **Select**, check several entries, and use **Restore** at the bottom.
+
+You then get the **Choose destination folder** page: start at the vault root, click into folders level by level, and choose **Restore here** at the bottom.
+
+The destination must already exist; the plugin does not create folders. If a file with the same name is already there, the restored one becomes "name 2" rather than overwriting anything.
+
+Once `.trash` has been emptied, nothing inside it can be restored.
+
+## 8. Scanning and privacy
+
+### 8.1 What is scanned
+
+Vault content, the configuration folder (`.obsidian` by default), and `.trash` in the current vault. Files under a hidden path segment are read too and counted separately under "Other & hidden".
+
+App-level caches, Obsidian Sync and Publish, cloud drives, the system trash, and system backups are not scanned.
+
+### 8.2 What is read
+
+File size, modified time, and each plugin's `manifest.json` (name, version, author). Note, attachment, and other file contents are not read.
+
+### 8.3 Privacy
+
+The plugin does not use the network and collects no data: no telemetry, ads, or accounts. The GitHub and Xiaohongshu buttons in settings only open your browser when you click them.
+
+### 8.4 How sizes are measured
+
+Logical file sizes, so the number can be lower than what the disk reports. The total is the sum of the five categories, and each file is counted once.
+
+### 8.5 When scanning happens
+
+The first time you open the view it scans automatically. After adding or removing files, use **More → Rescan**.
+
+## 9. Settings page
+
+Settings → Community plugins → Storage Cleanup has three parts: an entry that opens the view, an About page (version, author, feedback), and usage notes (scan scope, read-only boundaries, cleanup behavior, privacy, tips).
+
+There are no toggles; the 10 MB threshold and the scan scope cannot be changed.
+
+The interface follows Obsidian's language and appears in Chinese or English. Reload the plugin after changing the language.
+
+## 10. Limitations
+
+- No search; you browse by category, type, and folder.
+- Plugin data and config & themes are read-only, with no delete actions in the UI.
+- The `.trash` page only empties the whole folder — single files cannot be deleted there. Restoring works per file or per folder.
+- Files moved to `.trash` keep only their name; the original folder is not preserved, so restoring always asks you for a destination.
+- Restoring, deleting empty folders, and emptying `.trash` have no undo.
+- In a very large vault (tens of thousands of files), scanning and scrolling slow down.
+- The list is the previous scan's result and does not update as files change.
+
+## 11. FAQ
+
+**The total does not match what my system reports.**
+The plugin measures logical file sizes while the system reports disk usage; block alignment, compression, and cloud placeholders all create differences.
+
+**A file I just deleted or added is not in the list.**
+The list is the previous scan's result. Use **More → Rescan**.
+
+**Why is a large file missing from the cleanup candidates?**
+Candidates come only from non-hidden content files. A file in the configuration folder, `.trash`, or a hidden path never appears.
+
+**Cleanup said the file had changed.**
+The file was edited, renamed, or replaced after the scan, so the plugin skipped it. Rescan and try again.
+
+**Why did a restored file get a " 2" in its name?**
+The destination already had a file with that name, so the plugin looked for the first free name — "name 2", "name 3", and so on — leaving existing files untouched.
+
+**Does emptying .trash delete the .trash folder itself?**
+No. The folder stays; its contents are emptied.
+
+**Does cleanup ever start on its own?**
+No. Every cleanup needs a click plus a confirmation, and restoring needs a chosen destination. There is no automatic or scheduled cleanup, and no automatic restore.
+
+**Does it work on mobile?**
+Yes. Desktop and mobile share one view that adapts to the screen width.
+
+## 12. Feedback and license
+
+Storage Cleanup is open source under the [MIT License](./LICENSE).
+
+- Bug reports, reproducible issues, and feature requests: [GitHub Issues](https://github.com/jiaoyingxing/storage-cleanup/issues). PRs are welcome.
+- Community and release news: search Xiaohongshu for **焦应行**.
+
+<details>
+<summary>Building from source</summary>
 
 ```bash
 npm install
 npm run dev      # watch sources and build main.js
 npm run build    # type-check and build main.js
 npm test         # unit tests
-npm run check    # type-check, lint, unit tests, metadata, and docs checks
+npm run check    # full checks
 ```
 
-## 9. License & support
-
-- Storage Cleanup is open source under the [MIT License](./LICENSE).
-- Bugs and suggestions: [GitHub Issues](https://github.com/jiaoyingxing/storage-cleanup/issues); PRs welcome.
-- Community and product updates: search Xiaohongshu for **焦应行**.
+</details>
