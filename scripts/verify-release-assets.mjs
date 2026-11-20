@@ -30,9 +30,9 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DEFAULT_REPO = "jiaoyingxing/storage-cleanup";
 const EXPECTED_ASSETS = ["main.js", "manifest.json", "styles.css", "versions.json"];
 
@@ -100,7 +100,7 @@ function parseArgs(argv) {
     else if (token === "--keep") options.keep = true;
     else if (token === "--help" || token === "-h") {
       process.stdout.write(
-        "usage: node scripts/release/verify-release-assets.mjs --tag <tag> [--repo <owner/name>] [--dir <path>] [--body-file <path>] [--keep]\n",
+        "usage: node scripts/verify-release-assets.mjs --tag <tag> [--repo <owner/name>] [--dir <path>] [--body-file <path>] [--keep]\n",
       );
       process.exit(0);
     } else {
